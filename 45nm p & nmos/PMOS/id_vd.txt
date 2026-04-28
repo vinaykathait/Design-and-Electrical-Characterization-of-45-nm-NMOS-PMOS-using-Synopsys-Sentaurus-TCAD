@@ -1,0 +1,65 @@
+File {
+   Grid=    "VK_PMOS_fps.tdr"
+   Plot=    "@tdrdat@"
+   Current= "@plot@"
+   Output=  "@log@"
+}
+
+Electrode {
+   { Name="source"    Voltage= 0.0 }
+   { Name="drain"     Voltage= 0.0 }
+   { Name="gate"      Voltage= 0.0  WorkFunction= 3.7 }
+   { Name="substrate" Voltage= 0.0 }
+}
+
+Physics {
+   EffectiveIntrinsicDensity( OldSlotboom )
+}
+
+Physics (Material="Silicon") {
+   Mobility(
+      PhuMob
+      HighFieldSaturation
+      Enormal
+   )
+   Recombination(
+      SRH( DopingDependence )
+      Auger
+   )
+}
+
+Math {
+   Extrapolate
+   Iterations=      50
+   NotDamped=       50
+   ExitOnFailure
+   Method=          ParDiSo
+   NumberOfThreads= 4
+   Wallclock
+   -CheckUndefinedModels
+}
+
+Solve {
+   *--- Initial solution ---
+   Coupled(Iterations=200){ Poisson }
+   Coupled(Iterations=200){ Poisson Electron Hole }
+
+   *--- Step 1: Ramp gate to @Vg@
+   *    SWB Vg values: -1.6, -2.0, -2.4, -2.8, -3.2 ---
+   Quasistationary(
+      InitialStep= 0.001   Increment= 1.2
+      MinStep=     1e-8    MaxStep=   0.02
+      Goal { Name="gate" Voltage= @Vg@ }
+   ){ Coupled { Poisson Electron Hole } }
+
+   *--- Step 2: Sweep drain 0 -> @Vd@ at fixed Vgs = @Vg@
+   *    SWB Vd value: -1.2
+   *    Plot source current — source current is positive in pMOS convention ---
+   NewCurrentFile= "IdVd_@Vg@_"
+   Quasistationary(
+      DoZero
+      InitialStep= 0.001   Increment= 1.2
+      MinStep=     1e-8    MaxStep=   0.01
+      Goal { Name="drain" Voltage= @Vd@ }
+   ){ Coupled { Poisson Electron Hole } }
+}

@@ -1,0 +1,117 @@
+# 2D nMOSFET — 45nm
+# ------------------------------------------
+
+math coord.ucs
+
+# Substrate mesh
+line x location= 0.0        spacing= 0.25<nm>   tag= SiTop
+line x location= 12.5<nm>   spacing= 2.5<nm>
+line x location= 0.125<um>  spacing= 12.5<nm>
+line x location= 0.5<um>    spacing= 0.05<um>
+line x location= 1.0<um>    spacing= 0.1<um>    tag= SiBottom
+
+line y location= 0.0        spacing= 12.5<nm>   tag= Mid
+line y location= 0.10<um>   spacing= 12.5<nm>   tag= Right
+
+region Silicon xlo= SiTop xhi= SiBottom ylo= Mid yhi= Right
+init wafer.orient= 100 concentration= 1e14<cm-3> field= Boron
+
+AdvancedCalibration
+
+# Body implant / p well
+implant Arsenic dose= 1e13<cm-2> energy= 250<keV> tilt= 0 rotation= 0  ; 
+
+#vth implant
+implant Arsenic dose= 6e13<cm-2> energy= 25<keV> tilt= 0 rotation= 0  ; 
+diffuse temperature= 1050<C> time= 10.0<s> 
+struct tdr= n@node@_PMOS1  ; # p-Well
+
+grid set.min.normal.size= 1<nm> set.normal.growth.ratio.2d= 1.5
+mgoals accuracy= 1e-5
+pdbSet Oxide Grid perp.add.dist 1e-7
+pdbSet Grid NativeLayerThickness 1e-7
+
+# Gate oxide — deposition + thermal ramp
+deposit type= isotropic Oxide thickness= 0.0015 selective.materials= {Silicon} temperature= 850
+temp_ramp name= gox time= 20    temperature=  27  t.final= 600
+temp_ramp name= gox time=  5    temperature= 600  t.final= 850
+temp_ramp name= gox time=  2    temperature= 850
+temp_ramp name= gox time= 10    temperature= 850  t.final= 600
+temp_ramp name= gox time= 20    temperature= 600  t.final= 27
+diffuse temp.ramp= gox
+
+select z=1
+layers
+
+
+struct tdr= n@node@_PMOS2  ; # GateOx
+
+# Poly gate — height 50nm
+deposit material= {PolySilicon} type= fill coord= -0.050
+mask name= gate_mask left= -1 right= 22.5<nm>
+etch material= {PolySilicon} type= anisotropic time= 1 rate= {0.2} mask= gate_mask
+etch material= {Oxide} type= anisotropic time= 1 rate= {0.2}
+
+struct tdr= n@node@_PMOS3  ; # PolyGate
+
+# Poly reoxidation
+diffuse temperature= 850<C> time= 5.0<min> O2
+
+struct tdr= n@node@_PMOS4  ; # Poly Reox
+
+# LDD implant Lightly Doped Drain
+refinebox Silicon min= {0.0 0.0} max= {0.005 0.008} xrefine= {0.005 0.005 0.005} \
+                                                     yrefine= {0.005 0.005 0.005} add
+grid remesh
+implant Boron dose= 3e12<cm-2> energy= 8.00<keV> tilt= 0 rotation= 0
+diffuse temperature= 1050<C> time= 0.1<s>
+
+struct tdr= n@node@_PMOS5  ; # LDD Implant
+
+# Halo quad implants
+implant Arsenic dose= 5e12<cm-2> energy= 25<keV> tilt= 30<degree> rotation= 0          ; 
+implant Arsenic dose= 5e12<cm-2> energy= 25<keV> tilt= 30<degree> rotation= 90<degree>  ; 
+implant Arsenic dose= 5e12<cm-2> energy= 25<keV> tilt= 30<degree> rotation= 180<degree> ; 
+implant Arsenic dose= 5e12<cm-2> energy= 25<keV> tilt= 30<degree> rotation= 270<degree> ; 
+diffuse temperature= 1050<C> time= 5.0<s>
+
+struct tdr= n@node@_PMOS6  ; # Halo RTA
+
+# Nitride spacer
+deposit material= {Nitride} type= isotropic time= 1 rate= {0.012}
+etch    material= {Nitride} type= anisotropic time= 1 rate= {0.014} isotropic.overetch= 0.001
+etch    material= {Oxide}   type= anisotropic time= 1 rate= {0.01}
+
+struct tdr= n@node@_PMOS7  ; # Spacer
+
+# S/D implant
+refinebox Silicon min= {0.02 0.08} max= {0.10 0.20} xrefine= {0.005 0.005 0.005} \
+                                                     yrefine= {0.01 0.01 0.01} add
+grid remesh
+implant Boron dose= 4e14<cm-2> energy= 2.5<keV> tilt= 7 rotation= -90
+
+# Spike anneal
+diffuse temperature= 1050<C> time= 3.0<s>
+
+struct tdr= n@node@_PMOS8  ; # S/D Implants
+
+# CMP planarization
+set minx -0.020
+etch type= cmp coord= $minx
+transform reflect left
+
+# Contacts
+contact name= gate      box PolySilicon xlo= -0.018 xhi= -0.002 ylo= -0.020 yhi=  0.020
+contact name= source    box Silicon     xlo=  0.000 xhi=  0.005 ylo= -0.95  yhi= -0.040
+contact name= drain     box Silicon     xlo=  0.000 xhi=  0.005 ylo=  0.040 yhi=  0.095
+contact name= substrate bottom
+
+refinebox \
+min = {0.0  -0.15} \
+max = {0.06  0.15} \
+xrefine = {0.001 0.005 0.001} \
+yrefine = {0.005 0.002 0.005}
+grid remesh
+struct tdr= n@node@_PMOS;
+struct tdr= VK_PMOS;
+exit

@@ -1,0 +1,78 @@
+File {
+   Grid=    "VK_PMOS_fps.tdr"
+   Plot=    "@tdrdat@"
+   Current= "@plot@"
+   Output=  "@log@"
+}
+Electrode {
+   { Name="source"    Voltage= 0.0 }
+   { Name="drain"     Voltage= 0.0 }
+   { Name="gate"      Voltage= 0.0 Workfunction= 3.7}
+   { Name="substrate" Voltage= 0.0 }
+}
+
+
+Physics {
+   EffectiveIntrinsicDensity( OldSlotboom )
+}
+
+Physics(Material="Silicon") {
+   Mobility(
+      PhuMob
+      HighFieldSaturation
+      Enormal
+   )
+   Recombination(
+      SRH( DopingDependence )
+      Auger
+   )
+}
+
+Math {
+   Extrapolate
+   Iterations=   50
+   NotDamped=    50
+   ExitOnFailure
+   Method=       ParDiSo
+   NumberOfThreads= 4
+   Wallclock
+   -CheckUndefinedModels
+}
+
+Solve {
+
+   *--- Initial solution ---
+   Coupled(Iterations=200){ Poisson }
+   Coupled(Iterations=200){ Poisson Electron Hole }
+
+   *--- Step 1: Ramp gate to -1.2V first ---
+   Quasistationary(
+      InitialStep= 0.001   Increment= 1.2
+      MinStep=     1e-8    MaxStep=   0.02
+      Goal { Name="gate" Voltage= -3.2 }
+   ){ Coupled { Poisson Electron Hole } }
+
+   *--- Step 2: Ramp drain to @Vd@ ---
+   Quasistationary(
+      InitialStep= 0.001   Increment= 1.2
+      MinStep=     1e-8    MaxStep=   0.02
+      Goal { Name="drain" Voltage= @Vd@ }
+   ){ Coupled { Poisson Electron Hole } }
+
+   *--- Step 3: Reset gate to 0 ---
+   Quasistationary(
+      InitialStep= 0.001   Increment= 1.2
+      MinStep=     1e-8    MaxStep=   0.02
+      Goal { Name="gate" Voltage= 0.0 }
+   ){ Coupled { Poisson Electron Hole } }
+
+   *--- Step 4: Sweep gate from 0 to -1.2V ---
+   NewCurrentFile= "IdVg_"
+   Quasistationary(
+      DoZero
+      InitialStep= 0.005   Increment= 1.2
+      MinStep=     1e-8    MaxStep=   0.02
+      Goal { Name="gate" Voltage= -3.2 }
+   ){ Coupled { Poisson Electron Hole } }
+
+}

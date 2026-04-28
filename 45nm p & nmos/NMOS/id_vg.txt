@@ -1,0 +1,70 @@
+File {
+   * input files:
+   Grid=   "VK_NMOS_fps.tdr"
+   * output files:
+   Plot=   "@tdrdat@"
+   Current= "@plot@"
+   Output=  "@log@"
+}
+
+
+Electrode {
+   { Name="source"    Voltage= 0.0 }
+   { Name="drain"     Voltage= 0.0 }
+   { Name="gate"      Voltage= 0.0  WorkFunction= 3.7 }
+   { Name="substrate" Voltage= 0.0 }
+}
+
+Physics {
+   EffectiveIntrinsicDensity( OldSlotboom )
+}
+
+Physics(Material="Silicon") {
+   Mobility(
+      PhuMob
+      HighFieldSaturation
+      Enormal
+   )
+   Recombination(
+      SRH( DopingDependence )
+   )
+}
+
+Physics(MaterialInterface="Silicon/Oxide") {
+   Charge( Conc= 2e10 )
+}
+
+Math {
+   Extrapolate
+   Iterations=   50
+   NotDamped=    50
+   ExitOnFailure
+   Method=       ParDiSo
+   NumberOfThreads= 4
+   Wallclock
+   -CheckUndefinedModels
+}
+
+Solve {
+
+   *--- Initial solution ---
+   Coupled(Iterations=200){ Poisson }
+   Coupled(Iterations=200){ Poisson Electron Hole }
+
+   *--- Ramp drain to Vd ---
+   Quasistationary(
+      InitialStep= 0.001   Increment= 1.2
+      MinStep=     1e-8    MaxStep=   0.01
+      Goal { Name="drain" Voltage= @Vd@ }
+   ){ Coupled { Poisson Electron Hole } }
+
+   *--- Vg sweep 0 to 1.0V ---
+   NewCurrentFile= "IdVg_"
+   Quasistationary(
+      DoZero
+      InitialStep= 0.005   Increment= 1.2
+      MinStep=     1e-8    MaxStep=   0.02
+      Goal { Name="gate" Voltage= 1.0 }
+   ){ Coupled { Poisson Electron Hole } }
+
+}
